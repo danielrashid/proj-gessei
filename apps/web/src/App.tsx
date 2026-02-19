@@ -104,7 +104,7 @@ function buildTimeline(item: ProcessItem): TimelineStep[] {
 }
 
 export default function App() {
-  type FilterKey = "todos" | "ativos" | "pendentes" | "analise" | "concluidos";
+  type FilterKey = "todos" | "ativos" | "atrasados" | "proximosVencer" | "pendentes" | "analise" | "concluidos";
 
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string>("");
@@ -148,7 +148,13 @@ export default function App() {
 
   const filteredItems = useMemo(() => {
     let result: ProcessItem[];
-    if (selectedFilter === "ativos") {
+    if (selectedFilter === "atrasados") {
+      const ativos = items.filter((item) => item.status !== "concluido");
+      result = ativos.filter((item) => isOverdue(item.prazo));
+    } else if (selectedFilter === "proximosVencer") {
+      const ativos = items.filter((item) => item.status !== "concluido");
+      result = ativos.filter((item) => !isOverdue(item.prazo) && isUrgentDeadline(item.prazo));
+    } else if (selectedFilter === "ativos") {
       result = items.filter((item) => item.status !== "concluido");
     } else if (selectedFilter === "pendentes") {
       result = items.filter((item) => item.status === "pendente" || item.status === "atrasado");
@@ -331,16 +337,16 @@ export default function App() {
 
       <section className="metrics executive-grid">
         <button
-          className={`card metric-card critical-alert ${metrics.atrasados > 0 ? "pulse" : ""}`}
-          onClick={() => toggleFilter("pendentes")}
+          className={`card metric-card critical-alert ${metrics.atrasados > 0 ? "pulse" : ""} ${selectedFilter === "atrasados" ? "filter-active" : ""}`}
+          onClick={() => toggleFilter("atrasados")}
         >
           <p>⚠️ Atrasados</p>
           <strong>{metrics.atrasados}</strong>
           {metrics.atrasados > 0 && <span className="alert-badge">AÇÃO IMEDIATA</span>}
         </button>
         <button
-          className={`card metric-card urgent-alert ${metrics.proximosVencer > 0 ? "pulse" : ""}`}
-          onClick={() => toggleFilter("pendentes")}
+          className={`card metric-card urgent-alert ${metrics.proximosVencer > 0 ? "pulse" : ""} ${selectedFilter === "proximosVencer" ? "filter-active" : ""}`}
+          onClick={() => toggleFilter("proximosVencer")}
         >
           <p>⏰ Próximos a Vencer</p>
           <strong>{metrics.proximosVencer}</strong>

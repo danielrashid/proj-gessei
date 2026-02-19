@@ -683,6 +683,27 @@ tbody tr:hover {
   background: linear-gradient(135deg, #fee2e2, #fecaca);
   border: 2px solid #dc2626;
   color: #7f1d1d;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.critical-alert:hover {
+  background: linear-gradient(135deg, #fecaca, #fca5a5);
+  transform: translateY(-2px);
+}
+
+.critical-alert.filter-active {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(220, 38, 38, 0.25);
+}
+
+.critical-alert.filter-active strong {
+  color: #ffffff;
+}
+
+.critical-alert.filter-active p {
+  color: #ffffff;
 }
 
 .critical-alert strong {
@@ -700,6 +721,27 @@ tbody tr:hover {
   background: linear-gradient(135deg, #fef3c7, #fde68a);
   border: 2px solid #d97706;
   color: #78350f;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.urgent-alert:hover {
+  background: linear-gradient(135deg, #fde68a, #fcd34d);
+  transform: translateY(-2px);
+}
+
+.urgent-alert.filter-active {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(217, 119, 6, 0.25);
+}
+
+.urgent-alert.filter-active strong {
+  color: #ffffff;
+}
+
+.urgent-alert.filter-active p {
+  color: #ffffff;
 }
 
 .urgent-alert strong {
