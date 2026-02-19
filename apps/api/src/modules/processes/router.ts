@@ -16,6 +16,7 @@ const processSchema = z.object({
   secretaria: z.string().min(2),
   responsavel: z.string().min(3),
   status: z.enum(["novo", "em_analise", "pendente", "concluido", "atrasado"]),
+  urgencia: z.enum(["baixa", "media", "alta", "critica"]),
   prazo: z.string().date()
 });
 
@@ -33,6 +34,7 @@ router.post("/", requireRole(["admin", "gestor"]), (req, res) => {
   const payload: ProcessItem = {
     id: randomUUID(),
     ...parsed.data,
+    dataCriacao: new Date().toISOString().slice(0, 10),
     atualizadoEm: new Date().toISOString()
   };
 

@@ -15,6 +15,7 @@ type CreateProcessInput = {
   secretaria: string;
   responsavel: string;
   status: ProcessItem["status"];
+  urgencia: ProcessItem["urgencia"];
   prazo: string;
 };
 

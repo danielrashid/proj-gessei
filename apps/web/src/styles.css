@@ -606,3 +606,152 @@ tbody tr:hover {
   margin-top: 0;
   background: #f8fafc;
 }
+/* Urgência e Alertas */
+.urgencia-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.urgencia-baixa {
+  background: #dbeafe;
+  color: #0c4a6e;
+}
+
+.urgencia-media {
+  background: #fcd34d;
+  color: #78350f;
+}
+
+.urgencia-alta {
+  background: #fed7aa;
+  color: #7c2d12;
+}
+
+.urgencia-critica {
+  background: #fecaca;
+  color: #7f1d1d;
+  font-weight: 900;
+}
+
+/* Highlight de linhas */
+.row-overdue {
+  background-color: #fee2e2 !important;
+  border-left: 4px solid #dc2626;
+  font-weight: 500;
+}
+
+.row-overdue:hover {
+  background-color: #fecaca !important;
+}
+
+.row-critical {
+  background-color: #fecaca;
+  border-left: 4px solid #991b1b;
+}
+
+.row-critical:hover {
+  background-color: #feb2b2 !important;
+}
+
+.row-urgent-deadline {
+  background-color: #fef3c7;
+  border-left: 4px solid #d97706;
+}
+
+.row-urgent-deadline:hover {
+  background-color: #fde68a !important;
+}
+
+.overdue-warning {
+  color: #dc2626;
+  font-weight: 700;
+  margin-left: 6px;
+}
+
+.urgent-warning {
+  color: #d97706;
+  font-weight: 700;
+  margin-left: 6px;
+}
+
+/* Cards de alerta */
+.critical-alert {
+  background: linear-gradient(135deg, #fee2e2, #fecaca);
+  border: 2px solid #dc2626;
+  color: #7f1d1d;
+}
+
+.critical-alert strong {
+  color: #991b1b;
+  font-size: 28px;
+}
+
+.critical-alert p {
+  color: #7f1d1d;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.urgent-alert {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  border: 2px solid #d97706;
+  color: #78350f;
+}
+
+.urgent-alert strong {
+  color: #b45309;
+  font-size: 28px;
+}
+
+.urgent-alert p {
+  color: #78350f;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.alert-badge {
+  display: inline-block;
+  background: #dc2626;
+  color: #ffffff;
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+/* Efeito pulse para alertas */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Select para urgência */
+select {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}

@@ -46,6 +46,24 @@ function defaultDueDate() {
   return new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
+function daysUntilDue(prazoStr: string): number {
+  const prazo = new Date(prazoStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  prazo.setHours(0, 0, 0, 0);
+  const diff = prazo.getTime() - today.getTime();
+  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+}
+
+function isOverdue(prazoStr: string): boolean {
+  return daysUntilDue(prazoStr) < 0;
+}
+
+function isUrgentDeadline(prazoStr: string): boolean {
+  const days = daysUntilDue(prazoStr);
+  return days >= 0 && days < 3;
+}
+
 function buildTimeline(item: ProcessItem): TimelineStep[] {
   const sectors = ["GABINETE", "SERINCCI", "ANÁLISE TÉCNICA", "DESPACHO FINAL"];
 
@@ -101,6 +119,7 @@ export default function App() {
   const [interessadoNome, setInteressadoNome] = useState("");
   const [interessadoDoc, setInteressadoDoc] = useState("");
   const [prazo, setPrazo] = useState(defaultDueDate());
+  const [urgencia, setUrgencia] = useState<"baixa" | "media" | "alta" | "critica">("media");
   const [description, setDescription] = useState("");
   const [importLoading, setImportLoading] = useState(false);
   const [actionError, setActionError] = useState("");
@@ -109,29 +128,56 @@ export default function App() {
   const [selectedFilter, setSelectedFilter] = useState<FilterKey>("todos");
 
   const metrics = useMemo(
-    () => ({
-      ativos: items.filter((item) => item.status !== "concluido").length,
-      pendentes: metricByStatus(items, "pendente") + metricByStatus(items, "atrasado"),
-      concluidos: metricByStatus(items, "concluido"),
-      atencao: metricByStatus(items, "em_analise")
-    }),
+    () => {
+      const ativos = items.filter((item) => item.status !== "concluido");
+      const atrasados = ativos.filter((item) => isOverdue(item.prazo));
+      const proximosVencer = ativos.filter(
+        (item) => !isOverdue(item.prazo) && isUrgentDeadline(item.prazo)
+      );
+      return {
+        ativos: ativos.length,
+        pendentes: metricByStatus(items, "pendente") + metricByStatus(items, "atrasado"),
+        concluidos: metricByStatus(items, "concluido"),
+        atencao: metricByStatus(items, "em_analise"),
+        atrasados: atrasados.length,
+        proximosVencer: proximosVencer.length
+      };
+    },
     [items]
   );
 
   const filteredItems = useMemo(() => {
+    let result: ProcessItem[];
     if (selectedFilter === "ativos") {
-      return items.filter((item) => item.status !== "concluido");
+      result = items.filter((item) => item.status !== "concluido");
+    } else if (selectedFilter === "pendentes") {
+      result = items.filter((item) => item.status === "pendente" || item.status === "atrasado");
+    } else if (selectedFilter === "analise") {
+      result = items.filter((item) => item.status === "em_analise");
+    } else if (selectedFilter === "concluidos") {
+      result = items.filter((item) => item.status === "concluido");
+    } else {
+      result = items;
     }
-    if (selectedFilter === "pendentes") {
-      return items.filter((item) => item.status === "pendente" || item.status === "atrasado");
-    }
-    if (selectedFilter === "analise") {
-      return items.filter((item) => item.status === "em_analise");
-    }
-    if (selectedFilter === "concluidos") {
-      return items.filter((item) => item.status === "concluido");
-    }
-    return items;
+
+    // Reordenar por criticidade
+    return result.sort((a, b) => {
+      // 1. Atrasado vem primeiro
+      const aOverdue = isOverdue(a.prazo) ? 0 : 1;
+      const bOverdue = isOverdue(b.prazo) ? 0 : 1;
+      if (aOverdue !== bOverdue) return aOverdue - bOverdue;
+
+      // 2. Depois por urgência (crítica > alta > media > baixa)
+      const urgencyOrder = { critica: 0, alta: 1, media: 2, baixa: 3 };
+      const aUrgency = urgencyOrder[a.urgencia];
+      const bUrgency = urgencyOrder[b.urgencia];
+      if (aUrgency !== bUrgency) return aUrgency - bUrgency;
+
+      // 3. Depois por dias até prazo (mais próximo primeiro)
+      const aDays = daysUntilDue(a.prazo);
+      const bDays = daysUntilDue(b.prazo);
+      return aDays - bDays;
+    });
   }, [items, selectedFilter]);
 
   function toggleFilter(filter: FilterKey) {
@@ -151,6 +197,30 @@ export default function App() {
     if (status === "pendente") return "badge badge-warning";
     if (status === "concluido") return "badge badge-success";
     return "badge badge-info";
+  }
+
+  function rowHighlightClass(item: ProcessItem): string {
+    if (isOverdue(item.prazo)) return "row-overdue";
+    if (item.urgencia === "critica") return "row-critical";
+    if (isUrgentDeadline(item.prazo)) return "row-urgent-deadline";
+    return "";
+  }
+
+  function urgenciaLabel(urgencia: ProcessItem["urgencia"]): string {
+    switch (urgencia) {
+      case "critica":
+        return "Crítica";
+      case "alta":
+        return "Alta";
+      case "media":
+        return "Média";
+      default:
+        return "Baixa";
+    }
+  }
+
+  function urgenciaClass(urgencia: ProcessItem["urgencia"]): string {
+    return `urgencia-badge urgencia-${urgencia}`;
   }
 
   async function handleLogin() {
@@ -203,6 +273,7 @@ export default function App() {
         secretaria: "SERINCCI",
         responsavel: user.name,
         status: "novo",
+        urgencia,
         prazo
       });
 
@@ -212,6 +283,7 @@ export default function App() {
       setInteressadoNome("");
       setInteressadoDoc("");
       setPrazo(defaultDueDate());
+      setUrgencia("media");
       setDescription("");
       setImportOpen(false);
     } catch {
@@ -259,18 +331,27 @@ export default function App() {
 
       <section className="metrics executive-grid">
         <button
+          className={`card metric-card critical-alert ${metrics.atrasados > 0 ? "pulse" : ""}`}
+          onClick={() => toggleFilter("pendentes")}
+        >
+          <p>⚠️ Atrasados</p>
+          <strong>{metrics.atrasados}</strong>
+          {metrics.atrasados > 0 && <span className="alert-badge">AÇÃO IMEDIATA</span>}
+        </button>
+        <button
+          className={`card metric-card urgent-alert ${metrics.proximosVencer > 0 ? "pulse" : ""}`}
+          onClick={() => toggleFilter("pendentes")}
+        >
+          <p>⏰ Próximos a Vencer</p>
+          <strong>{metrics.proximosVencer}</strong>
+          {metrics.proximosVencer > 0 && <span className="alert-badge">EM &lt; 3 DIAS</span>}
+        </button>
+        <button
           className={`card metric-card filter-card ${selectedFilter === "ativos" ? "filter-active filter-blue" : ""}`}
           onClick={() => toggleFilter("ativos")}
         >
           <p>Processos Ativos</p>
           <strong>{metrics.ativos}</strong>
-        </button>
-        <button
-          className={`card metric-card danger-left filter-card ${selectedFilter === "pendentes" ? "filter-active filter-red" : ""}`}
-          onClick={() => toggleFilter("pendentes")}
-        >
-          <p>Atrasados/Pendentes</p>
-          <strong>{metrics.pendentes}</strong>
         </button>
         <button
           className={`card metric-card warning-left filter-card ${selectedFilter === "analise" ? "filter-active filter-amber" : ""}`}
@@ -317,25 +398,39 @@ export default function App() {
               <th>SEI</th>
               <th>Título</th>
               <th>Responsável</th>
+              <th>Urgência</th>
               <th>Status SLA</th>
               <th>Prazo</th>
             </tr>
           </thead>
           <tbody>
             {filteredItems.map((item) => (
-              <tr key={item.id} onClick={() => setSelectedProcess(item)} className="clickable-row">
+              <tr
+                key={item.id}
+                onClick={() => setSelectedProcess(item)}
+                className={`clickable-row ${rowHighlightClass(item)}`}
+              >
                 <td className="mono">{item.seiRef ? formatProcessNumber(item.seiRef) : "-"}</td>
                 <td>{item.titulo}</td>
                 <td>{item.responsavel}</td>
                 <td>
+                  <span className={urgenciaClass(item.urgencia)}>{urgenciaLabel(item.urgencia)}</span>
+                </td>
+                <td>
                   <span className={statusClass(item.status)}>{statusLabel(item.status)}</span>
                 </td>
-                <td>{new Date(item.prazo).toLocaleDateString("pt-BR")}</td>
+                <td>
+                  {new Date(item.prazo).toLocaleDateString("pt-BR")}
+                  {isOverdue(item.prazo) && <span className="overdue-warning"> (ATRASADO)</span>}
+                  {!isOverdue(item.prazo) && isUrgentDeadline(item.prazo) && (
+                    <span className="urgent-warning"> (&lt;3 dias)</span>
+                  )}
+                </td>
               </tr>
             ))}
             {filteredItems.length === 0 && (
               <tr>
-                <td colSpan={5} className="empty-row">
+                <td colSpan={6} className="empty-row">
                   Nenhum processo encontrado para este filtro.
                 </td>
               </tr>
@@ -397,6 +492,16 @@ export default function App() {
               <label>
                 Prazo
                 <input type="date" value={prazo} onChange={(event) => setPrazo(event.target.value)} required />
+              </label>
+
+              <label>
+                Nível de Urgência
+                <select value={urgencia} onChange={(event) => setUrgencia(event.target.value as any)} required>
+                  <option value="baixa">Baixa</option>
+                  <option value="media">Média</option>
+                  <option value="alta">Alta</option>
+                  <option value="critica">Crítica</option>
+                </select>
               </label>
 
               <label>

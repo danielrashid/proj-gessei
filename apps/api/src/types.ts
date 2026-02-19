@@ -9,6 +9,8 @@ export type User = {
 
 export type ProcessStatus = "novo" | "em_analise" | "pendente" | "concluido" | "atrasado";
 
+export type Urgencia = "baixa" | "media" | "alta" | "critica";
+
 export type ProcessItem = {
   id: string;
   seiRef?: string;
@@ -18,6 +20,8 @@ export type ProcessItem = {
   secretaria: string;
   responsavel: string;
   status: ProcessStatus;
+  urgencia: Urgencia;
   prazo: string;
+  dataCriacao: string;
   atualizadoEm: string;
 };

@@ -14,6 +14,8 @@ export type ProcessItem = {
   secretaria: string;
   responsavel: string;
   status: "novo" | "em_analise" | "pendente" | "concluido" | "atrasado";
+  urgencia: "baixa" | "media" | "alta" | "critica";
   prazo: string;
+  dataCriacao: string;
   atualizadoEm: string;
 };
