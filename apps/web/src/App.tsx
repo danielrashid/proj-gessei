@@ -22,14 +22,14 @@ function formatProcessNumber(value?: string) {
   }
 
   const digits = raw;
-  if (digits.length < 12) {
+  if (digits.length < 19) {
     return digits;
   }
 
   const p1 = digits.slice(0, 5);
-  const middle = digits.slice(5, -6);
-  const year = digits.slice(-6, -2);
-  const check = digits.slice(-2);
+  const middle = digits.slice(5, 13);
+  const year = digits.slice(13, 17);
+  const check = digits.slice(17);
 
   if (!middle || !year || !check) {
     return digits;
