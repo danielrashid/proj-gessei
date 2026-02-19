@@ -1,0 +1,461 @@
+import React, { useState } from 'react';
+import { 
+  LayoutDashboard, 
+  FileText, 
+  AlertTriangle, 
+  CheckCircle, 
+  Clock, 
+  Search, 
+  MoreVertical, 
+  Eye, 
+  EyeOff, 
+  ArrowRight,
+  Building2,
+  Filter,
+  Bell,
+  RefreshCw,
+  Plus,
+  X
+} from 'lucide-react';
+
+// --- MOCK DATA (Simulando o que viria do Backend Python/Postgres) ---
+const PROCESSOS_MOCK = [
+  {
+    id: 1,
+    nup: "00040-00012345/2024-89",
+    interessado: "Maria da Silva",
+    cpf: "123.456.789-00",
+    assunto: "Denúncia de Invasão - Chácara 32 (São Sebastião)",
+    dataEntrada: "2024-02-10",
+    setorAtual: "DIR. OBRAS 1",
+    diasNoSetor: 12, // Crítico
+    statusSla: "critico", // normal, alerta, critico
+    historico: [
+      { setor: "GABINETE", status: "concluido", data: "2024-02-10", msg: "Recebido e encaminhado." },
+      { setor: "SERINCCI", status: "concluido", data: "2024-02-11", msg: "Análise preliminar feita." },
+      { setor: "SUOB", status: "concluido", data: "2024-02-12", msg: "Encaminhado para vistoria." },
+      { setor: "DIR. OBRAS 1", status: "pendente", data: "2024-02-12", msg: "Aguardando agendamento de equipe." }
+    ]
+  },
+  {
+    id: 2,
+    nup: "00040-00054321/2024-12",
+    interessado: "Assoc. Moradores Lago Norte",
+    cpf: "00.000.000/0001-99",
+    assunto: "Solicitação de Poda de Árvore em Risco",
+    dataEntrada: "2024-02-18",
+    setorAtual: "AUDITORIA",
+    diasNoSetor: 2, // Normal
+    statusSla: "normal",
+    historico: [
+      { setor: "GABINETE", status: "concluido", data: "2024-02-18", msg: "Recebido." },
+      { setor: "SERINCCI", status: "concluido", data: "2024-02-19", msg: "Prioridade alta." },
+      { setor: "AUDITORIA", status: "pendente", data: "2024-02-20", msg: "Em análise técnica." }
+    ]
+  },
+  {
+    id: 3,
+    nup: "00040-00099887/2024-55",
+    interessado: "João Pereira",
+    cpf: "987.654.321-11",
+    assunto: "Reclamação - Obra Irregular Vicente Pires",
+    dataEntrada: "2024-02-15",
+    setorAtual: "SUOB",
+    diasNoSetor: 6, // Alerta
+    statusSla: "alerta",
+    historico: [
+      { setor: "GABINETE", status: "concluido", data: "2024-02-15", msg: "Autuado." },
+      { setor: "SUOB", status: "pendente", data: "2024-02-16", msg: "Verificando competência." }
+    ]
+  }
+];
+
+// Componente de Badge de SLA
+const SlaBadge = ({ status, dias }) => {
+  const configs = {
+    normal: { color: "bg-green-100 text-green-700 border-green-200", icon: CheckCircle, label: "No Prazo" },
+    alerta: { color: "bg-yellow-100 text-yellow-700 border-yellow-200", icon: Clock, label: "Atenção" },
+    critico: { color: "bg-red-100 text-red-700 border-red-200", icon: AlertTriangle, label: "Atrasado" }
+  };
+  const Config = configs[status];
+  const Icon = Config.icon;
+
+  return (
+    <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-xs font-medium w-fit ${Config.color}`}>
+      <Icon size={12} />
+      <span>{Config.label} ({dias}d)</span>
+    </div>
+  );
+};
+
+// Componente Modal de Importação
+const ImportModal = ({ isOpen, onClose }) => {
+  const [nup, setNup] = useState("");
+  const [descricao, setDescricao] = useState("");
+
+  if (!isOpen) return null;
+
+  // Função para permitir apenas números
+  const handleNupChange = (e) => {
+    const value = e.target.value.replace(/\D/g, ""); // Remove tudo que não for dígito
+    setNup(value);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // Aqui iria a lógica de enviar para o backend
+    alert(`Enviando para o backend Python:\nNUP (RAW): ${nup}\nDescrição: ${descricao}`);
+    setNup("");
+    setDescricao("");
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div className="bg-blue-600 text-white p-4 flex justify-between items-center">
+          <h2 className="font-bold flex items-center gap-2">
+            <Plus size={20} className="text-blue-200"/>
+            Nova Importação SEI
+          </h2>
+          <button onClick={onClose} className="text-blue-200 hover:text-white transition">
+            <X size={20} />
+          </button>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Número do Processo (Apenas Números)
+            </label>
+            <input 
+              type="text" 
+              value={nup}
+              onChange={handleNupChange}
+              placeholder="Ex: 0004000012345202489"
+              className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono text-slate-700"
+              required
+            />
+            <p className="text-xs text-slate-400 mt-1">O sistema formatará automaticamente: 00040-000.../2024-89</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Descrição Simples
+            </label>
+            <textarea 
+              value={descricao}
+              onChange={(e) => setDescricao(e.target.value)}
+              placeholder="Ex: Pedido de vistoria técnica em Ceilândia"
+              className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-700 h-24 resize-none"
+              required
+            />
+          </div>
+
+          <div className="pt-2 flex justify-end gap-3">
+            <button 
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm font-medium"
+            >
+              Cancelar
+            </button>
+            <button 
+              type="submit"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium shadow-sm flex items-center gap-2"
+            >
+              <Plus size={16} /> Importar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// Componente Modal de Detalhes
+const ProcessoDetalhes = ({ processo, onClose }) => {
+  const [showSensitive, setShowSensitive] = useState(false);
+
+  if (!processo) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        {/* Header Modal */}
+        <div className="bg-slate-900 text-white p-6 flex justify-between items-start">
+          <div>
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              <FileText size={20} className="text-blue-400"/>
+              Processo {processo.nup}
+            </h2>
+            <p className="text-slate-400 text-sm mt-1">Entrada: {new Date(processo.dataEntrada).toLocaleDateString('pt-BR')}</p>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-white transition">✕</button>
+        </div>
+
+        <div className="p-6 overflow-y-auto">
+          {/* Dados do Interessado (LGPD) */}
+          <div className="mb-8 p-4 bg-slate-50 rounded-lg border border-slate-200">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Dados do Interessado (LGPD)</h3>
+              <button 
+                onClick={() => setShowSensitive(!showSensitive)}
+                className="text-xs flex items-center gap-1 text-blue-600 hover:text-blue-800 font-medium"
+              >
+                {showSensitive ? <><EyeOff size={14}/> Ocultar Dados</> : <><Eye size={14}/> Visualizar Dados</>}
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs text-slate-500">Nome / Razão Social</p>
+                <p className="font-medium text-slate-900">
+                  {showSensitive ? processo.interessado : "DADO PROTEGIDO *******"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">CPF / CNPJ</p>
+                <p className="font-medium text-slate-900">
+                  {showSensitive ? processo.cpf : "***.***.***-**"}
+                </p>
+              </div>
+            </div>
+            {showSensitive && (
+              <p className="mt-2 text-[10px] text-red-500 flex items-center gap-1">
+                <AlertTriangle size={10} />
+                Acesso registrado no log de auditoria: {new Date().toLocaleString()} - Usuário: admin_serincci
+              </p>
+            )}
+          </div>
+
+          {/* Assunto */}
+          <div className="mb-8">
+            <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-2">Objeto do Processo</h3>
+            <p className="text-slate-800 bg-white p-3 border rounded-md shadow-sm">{processo.assunto}</p>
+          </div>
+
+          {/* Timeline Vertical */}
+          <div>
+            <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-4">Trilha de Auditoria (Tramitação)</h3>
+            <div className="relative pl-4 border-l-2 border-slate-200 space-y-8">
+              {processo.historico.map((step, idx) => (
+                <div key={idx} className="relative">
+                  {/* Bolinha da Timeline */}
+                  <div className={`absolute -left-[21px] top-1 w-4 h-4 rounded-full border-2 
+                    ${step.status === 'concluido' ? 'bg-green-500 border-green-500' : 'bg-white border-blue-500 animate-pulse'}`}>
+                  </div>
+                  
+                  <div className="bg-white p-3 rounded-lg border border-slate-100 shadow-sm hover:shadow-md transition">
+                    <div className="flex justify-between items-start">
+                      <span className={`font-bold text-sm ${step.status === 'pendente' ? 'text-blue-700' : 'text-slate-700'}`}>
+                        {step.setor}
+                      </span>
+                      <span className="text-xs text-slate-400">{step.data}</span>
+                    </div>
+                    <p className="text-sm text-slate-600 mt-1">{step.msg}</p>
+                    {step.status === 'pendente' && (
+                      <div className="mt-2 text-xs bg-red-50 text-red-700 inline-block px-2 py-1 rounded border border-red-100 font-medium">
+                         Parado há {processo.diasNoSetor} dias
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 border-t bg-slate-50 flex justify-end gap-3">
+          <button onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg text-sm font-medium">Fechar</button>
+          <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium shadow-sm">
+            Enviar Cobrança via SEI
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default function ProcessManagementApp() {
+  const [selectedProcess, setSelectedProcess] = useState(null);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+
+  // Stats
+  const total = PROCESSOS_MOCK.length;
+  const criticos = PROCESSOS_MOCK.filter(p => p.statusSla === 'critico').length;
+  const alertas = PROCESSOS_MOCK.filter(p => p.statusSla === 'alerta').length;
+
+  return (
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
+      
+      {/* Topbar */}
+      <header className="bg-white border-b border-slate-200 h-16 px-6 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="bg-blue-600 text-white p-1.5 rounded-lg">
+            <Building2 size={24} />
+          </div>
+          <div>
+            <h1 className="font-bold text-lg text-slate-900 leading-tight">SERINCCI</h1>
+            <p className="text-[10px] text-slate-500 font-medium tracking-wider uppercase">Sistema de Gestão de Processos</p>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <input 
+              type="text" 
+              placeholder="Buscar por NUP ou Assunto..." 
+              className="pl-10 pr-4 py-2 bg-slate-100 border-none rounded-full text-sm w-64 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+            />
+            <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
+          </div>
+          <button className="relative p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full">
+            <Bell size={20} />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+          </button>
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shadow-md ring-2 ring-white">
+            AS
+          </div>
+        </div>
+      </header>
+
+      <main className="p-6 max-w-[1400px] mx-auto">
+        
+        {/* Dashboard Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+            <div>
+              <p className="text-slate-500 text-xs font-medium uppercase mb-1">Processos Ativos</p>
+              <h2 className="text-2xl font-bold text-slate-800">{total}</h2>
+            </div>
+            <div className="p-3 bg-slate-100 rounded-lg text-slate-600">
+              <LayoutDashboard size={20} />
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-l-4 border-l-red-500 flex items-center justify-between">
+            <div>
+              <p className="text-red-500 text-xs font-bold uppercase mb-1">Atrasados (Crítico)</p>
+              <h2 className="text-2xl font-bold text-slate-800">{criticos}</h2>
+            </div>
+            <div className="p-3 bg-red-50 rounded-lg text-red-600">
+              <AlertTriangle size={20} />
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-l-4 border-l-yellow-400 flex items-center justify-between">
+            <div>
+              <p className="text-yellow-600 text-xs font-bold uppercase mb-1">Atenção (Alerta)</p>
+              <h2 className="text-2xl font-bold text-slate-800">{alertas}</h2>
+            </div>
+            <div className="p-3 bg-yellow-50 rounded-lg text-yellow-600">
+              <Clock size={20} />
+            </div>
+          </div>
+
+          {/* Botão Sincronizar SEI */}
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-center items-start cursor-pointer hover:bg-slate-50 hover:border-blue-300 transition group">
+            <h3 className="font-bold text-sm flex items-center gap-2 text-slate-700 group-hover:text-blue-600">
+              <RefreshCw size={16} className="text-slate-400 group-hover:text-blue-600" />
+              Sincronizar SEI
+            </h3>
+            <p className="text-slate-400 text-xs mt-1 leading-tight">Importa atualização dos processos salvos</p>
+          </div>
+
+          {/* Botão Nova Importação */}
+          <div 
+            onClick={() => setIsImportModalOpen(true)}
+            className="bg-gradient-to-br from-blue-600 to-indigo-700 p-4 rounded-xl shadow-lg shadow-blue-200 text-white flex flex-col justify-center items-start cursor-pointer hover:shadow-xl transition hover:scale-[1.02]"
+          >
+            <h3 className="font-bold text-sm flex items-center gap-2">
+              <Plus size={18} className="text-blue-200" />
+              Nova Importação
+            </h3>
+            <p className="text-blue-100 text-xs mt-1">Processo SEI</p>
+          </div>
+        </div>
+
+        {/* Content Area */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col min-h-[500px]">
+          
+          {/* Table Toolbar */}
+          <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+            <h2 className="font-bold text-slate-700 flex items-center gap-2">
+              <FileText size={18} className="text-slate-400"/>
+              Tramitação Atual
+            </h2>
+            <div className="flex gap-2">
+              <button className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition">
+                <Filter size={14} /> Filtrar
+              </button>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase text-slate-500 tracking-wider font-semibold">
+                  <th className="p-4">NUP / Processo</th>
+                  <th className="p-4">Assunto</th>
+                  <th className="p-4">Localização (Setor)</th>
+                  <th className="p-4 text-center">Status SLA</th>
+                  <th className="p-4 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-sm">
+                {PROCESSOS_MOCK.map((proc) => (
+                  <tr key={proc.id} className="hover:bg-blue-50/50 transition cursor-pointer" onClick={() => setSelectedProcess(proc)}>
+                    <td className="p-4 font-medium text-blue-600">
+                      {proc.nup}
+                      <div className="text-[10px] text-slate-400 mt-0.5 font-normal">Entrada: {new Date(proc.dataEntrada).toLocaleDateString('pt-BR')}</div>
+                    </td>
+                    <td className="p-4 text-slate-600 max-w-xs truncate" title={proc.assunto}>
+                      {proc.assunto}
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-2 text-slate-700 font-medium bg-slate-100 w-fit px-2 py-1 rounded-md text-xs">
+                        <Building2 size={12} />
+                        {proc.setorAtual}
+                      </div>
+                    </td>
+                    <td className="p-4 text-center">
+                      <div className="flex justify-center">
+                        <SlaBadge status={proc.statusSla} dias={proc.diasNoSetor} />
+                      </div>
+                    </td>
+                    <td className="p-4 text-right">
+                      <button className="text-slate-400 hover:text-blue-600 p-1 rounded-full hover:bg-blue-100 transition">
+                        <MoreVertical size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          <div className="p-4 border-t border-slate-100 text-center text-xs text-slate-400 mt-auto">
+            Exibindo {PROCESSOS_MOCK.length} processos. Dados sincronizados com SEI há 15 min.
+          </div>
+        </div>
+
+      </main>
+
+      {/* Modal de Nova Importação */}
+      <ImportModal 
+        isOpen={isImportModalOpen} 
+        onClose={() => setIsImportModalOpen(false)} 
+      />
+
+      {/* Detail Modal */}
+      {selectedProcess && (
+        <ProcessoDetalhes 
+          processo={selectedProcess} 
+          onClose={() => setSelectedProcess(null)} 
+        />
+      )}
+    </div>
+  );
+}

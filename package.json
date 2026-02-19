@@ -1,0 +1,15 @@
+{
+  "name": "gessei",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plataforma de gestão de processos para secretarias com integração operacional ao SEI.",
+  "scripts": {
+    "dev": "concurrently \"npm --prefix apps/api run dev\" \"npm --prefix apps/web run dev\"",
+    "build": "npm --prefix apps/api run build && npm --prefix apps/web run build",
+    "start": "npm --prefix apps/api run start",
+    "install:all": "npm install && npm --prefix apps/api install && npm --prefix apps/web install"
+  },
+  "devDependencies": {
+    "concurrently": "^6.5.1"
+  }
+}
